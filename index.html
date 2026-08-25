@@ -2,24 +2,24 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>📦 玩具預訂管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="玩具預訂">
-  <!-- 這是放在手機桌面的圖示 (先借用一個免費的紙箱圖示，以後可以換) -->
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063822.png">
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 min-h-screen">
 
-  <!-- 登入頁面 (預設顯示) -->
+  <!-- 登入頁面 -->
   <div id="login-page" class="flex flex-col items-center justify-center min-h-screen">
     <div class="bg-white p-8 rounded-lg shadow-md text-center max-w-sm w-full mx-4">
       <h1 class="text-3xl font-bold mb-2">📦</h1>
       <h2 class="text-xl font-bold mb-6">玩具預訂管理系統</h2>
-      <p class="text-sm text-gray-500 mb-6">請登入以管理專屬的預訂清單</p>
+      <p class="text-sm text-gray-500 mb-6">請登入以管理您專屬的預訂清單</p>
       <button id="login-btn" class="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded shadow hover:bg-gray-50 transition">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6 mr-3" />
         使用 Google 帳號登入
@@ -27,38 +27,41 @@
     </div>
   </div>
 
-  <!-- 系統主介面 (預設隱藏，登入後顯示) -->
+  <!-- 系統主介面 -->
   <div id="main-app" class="hidden max-w-3xl mx-auto p-4 md:p-6">
     
-    <!-- 頂部資訊與登出 -->
     <div class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center mb-6">
-      <h1 class="text-xl md:text-2xl font-bold">📦 玩具預訂管理系統</h1>
+      <h1 class="text-xl md:text-2xl font-bold">📦 玩具預訂系統</h1>
       <div class="flex items-center">
         <img id="user-pic" class="w-8 h-8 rounded-full mr-3 border" src="" alt="User">
         <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700">登出</button>
       </div>
     </div>
 
-    <!-- 主內容區塊 -->
     <div class="bg-white p-6 rounded-lg shadow-md">
-      <!-- 分頁按鈕 -->
       <div class="flex space-x-2 mb-6 border-b pb-2">
         <button id="tab-pending" onclick="switchTab('pending')" class="px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold">預訂清單</button>
         <button id="tab-received" onclick="switchTab('received')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">已取貨</button>
         <button id="tab-form" onclick="switchTab('form')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">➕ 新增</button>
       </div>
 
-      <!-- 預訂清單頁面 -->
+      <!-- ✨ 預訂清單頁面 (更新了頂部的月份過濾器) -->
       <div id="page-pending">
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
-          <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 今月預計需付尾款總額：$0</h2>
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded flex flex-col md:flex-row md:items-center justify-between">
+          <div class="mb-3 md:mb-0">
+            <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 預計需付尾款：$0</h2>
+          </div>
+          <div class="flex items-center space-x-2">
+            <label class="text-sm font-bold text-gray-700">月份：</label>
+            <input type="month" id="filter-month" class="border border-gray-300 p-1 rounded font-bold text-sm" onchange="renderLists()">
+            <button onclick="clearMonthFilter()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 shadow-sm transition">看全部</button>
+          </div>
         </div>
         <div id="pending-list" class="space-y-4">
           <p class="text-gray-500 text-center py-4">資料載入中...</p>
         </div>
       </div>
 
-      <!-- 已取貨清單頁面 -->
       <div id="page-received" class="hidden">
         <div id="received-list" class="space-y-4 opacity-75"></div>
       </div>
@@ -120,18 +123,18 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-    // ✨ 新增了 Auth 模組
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-    // 👇 1. 填入你的 firebaseConfig
+    // 👇 1. 請填寫你的 firebaseConfig 👇
     const firebaseConfig = {
-      apiKey: "AIzaSyB3QHQmQSIfr5muTomqXp_I_Aijp9kGcLA",
-      authDomain: "preorder-list-f23f2.firebaseapp.com",
-      projectId: "preorder-list-f23f2",
-      storageBucket: "preorder-list-f23f2.firebasestorage.app",
-      messagingSenderId: "600921326079",
-      appId: "1:600921326079:web:de863e6602b5f4a44a27ca"
-    };
+  apiKey: "AIzaSyB3QHQmQSIfr5muTomqXp_I_Aijp9kGcLA",
+  authDomain: "preorder-list-f23f2.firebaseapp.com",
+  projectId: "preorder-list-f23f2",
+  storageBucket: "preorder-list-f23f2.firebasestorage.app",
+  messagingSenderId: "600921326079",
+  appId: "1:600921326079:web:de863e6602b5f4a44a27ca"
+};
+    // 👆 ============================= 👆
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -141,18 +144,20 @@
     let items = [];
     let editingId = null;
     let currentUser = null; 
-    let unsubscribeSnapshot = null; // 用來在登出時取消監聽資料庫
+    let unsubscribeSnapshot = null;
 
-    // 🌟 處理登入狀態改變
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
-        // 登入成功：隱藏登入頁，顯示主介面，並載入頭像
         document.getElementById('login-page').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
         document.getElementById('user-pic').src = user.photoURL;
 
-        // 載入該使用者的獨立資料！ (where 條件過濾)
+        // ✨ 登入後自動把篩選器設為「今個月」
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        document.getElementById('filter-month').value = currentYearMonth;
+
         const q = query(collection(db, "toys"), where("userId", "==", user.uid));
         
         unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
@@ -161,7 +166,6 @@
         });
       } else {
         currentUser = null;
-        // 登出：隱藏主介面，顯示登入頁，並清除資料庫監聽
         document.getElementById('login-page').classList.remove('hidden');
         document.getElementById('main-app').classList.add('hidden');
         if (unsubscribeSnapshot) unsubscribeSnapshot();
@@ -169,28 +173,27 @@
       }
     });
 
-    // 登入按鈕事件
     document.getElementById('login-btn').addEventListener('click', () => {
-      signInWithPopup(auth, provider).catch(error => {
-        console.error("登入失敗", error);
-        alert("登入失敗，請稍後再試。");
-      });
+      signInWithPopup(auth, provider).catch(error => alert("登入失敗，請稍後再試。"));
     });
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-    // 登出按鈕事件
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      signOut(auth);
-    });
+    // 清空月份篩選並重新渲染
+    window.clearMonthFilter = function() {
+      document.getElementById('filter-month').value = '';
+      renderLists();
+    };
 
-    // ----- 下方的清單渲染與表單邏輯基本不變 ----- //
-
-    function renderLists() {
+    window.renderLists = function() {
       const pendingList = document.getElementById('pending-list');
       const receivedList = document.getElementById('received-list');
       pendingList.innerHTML = '';
       receivedList.innerHTML = '';
 
       let totals = { HKD: 0, RMB: 0, JPY: 0 };
+      const selectedMonth = document.getElementById('filter-month').value; // 取得使用者選擇的月份
+
+      // 取得系統當前的年月，用來判定是否「逾期」
       const now = new Date();
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -198,54 +201,95 @@
       const manufacturers = new Set();
       const shops = new Set();
 
-      const getSortValue = (dateStr) => {
+      // 防呆：標準化日期，例如輸入 2026-8 會自動視為 2026-08
+      const normalizeDate = (d) => {
+         if(!d || d === '未知') return d;
+         if(d.match(/^\d{4}-\d$/)) return d.replace(/-(\d)$/, '-0$1'); 
+         return d;
+      };
+
+      const getSortValue = (rawDate) => {
+        const dateStr = normalizeDate(rawDate);
         if (!dateStr || dateStr === '未知') return '9999-99-99';
         if (dateStr.length === 4) return `${dateStr}-12-31`;
         if (dateStr.length === 7) return `${dateStr}-31`;
         return dateStr;
       };
 
-      const pendingItems = items.filter(i => i.status === 'pending')
-        .sort((a, b) => getSortValue(a.expectedDate).localeCompare(getSortValue(b.expectedDate)));
+      // 逾期判定邏輯
+      const isOverdue = (rawDate) => {
+        const dateStr = normalizeDate(rawDate);
+        if (!dateStr || dateStr === '未知') return false;
+        let checkVal = dateStr.length === 4 ? `${dateStr}-12` : dateStr;
+        return checkVal < currentYearMonth;
+      };
 
+      const pendingItems = items.filter(i => i.status === 'pending');
       const receivedItems = items.filter(i => i.status === 'received')
         .sort((a, b) => getSortValue(b.expectedDate).localeCompare(getSortValue(a.expectedDate)));
 
-      if (pendingItems.length === 0) {
-        pendingList.innerHTML = '<p class="text-center text-gray-500 py-10">目前沒有待收貨的玩具喔！</p>';
+      // ✨ 將未取貨訂單分為「逾期」與「正常」
+      let overdueItems = pendingItems.filter(i => isOverdue(i.expectedDate));
+      let normalItems = pendingItems.filter(i => !isOverdue(i.expectedDate));
+
+      // 兩邊各自依照日期排序
+      overdueItems.sort((a, b) => getSortValue(a.expectedDate).localeCompare(getSortValue(b.expectedDate)));
+      normalItems.sort((a, b) => getSortValue(a.expectedDate).localeCompare(getSortValue(b.expectedDate)));
+
+      // 如果有選擇月份，正常清單只顯示該月份 (逾期的無論如何都會顯示並置頂)
+      let displayedNormalItems = normalItems;
+      if (selectedMonth) {
+         displayedNormalItems = normalItems.filter(i => {
+             const nDate = normalizeDate(i.expectedDate);
+             return nDate && nDate.startsWith(selectedMonth);
+         });
+      }
+
+      // 合併要顯示在畫面上的一覽表
+      const allPendingToDisplay = [...overdueItems, ...displayedNormalItems];
+
+      if (allPendingToDisplay.length === 0) {
+        pendingList.innerHTML = '<p class="text-center text-gray-500 py-10">這個月沒有預訂，或是資料已全部取貨！</p>';
       } else {
-        pendingItems.forEach(item => {
+        allPendingToDisplay.forEach(item => {
           if(item.category) categories.add(item.category);
           if(item.manufacturer) manufacturers.add(item.manufacturer);
           if(item.shop) shops.add(item.shop);
 
-          if (item.expectedDate && item.expectedDate.startsWith(currentYearMonth)) {
-             const currency = item.currency || 'HKD';
-             if (totals[currency] !== undefined) {
-                 totals[currency] += Number(item.balance || 0);
-             }
+          // 只要是顯示在畫面上的（選定月＋逾期單），就加入尾款總數
+          const currency = item.currency || 'HKD';
+          if (totals[currency] !== undefined) {
+             totals[currency] += Number(item.balance || 0);
           }
 
+          // 判斷是否逾期並決定樣式
+          const overdue = isOverdue(item.expectedDate);
+          const borderClass = overdue ? 'border-red-500 border-2 bg-red-50 shadow-md' : 'border border-gray-200 bg-white';
+          const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
+          
           let currencySymbol = '$';
           if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
           if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
 
           pendingList.innerHTML += `
-            <div class="flex items-center p-4 border rounded-lg shadow-sm bg-white">
-              <div class="flex flex-col items-center mr-4 space-y-2">
-                <input type="checkbox" onchange="toggleStatus('${item.id}', 'pending')" class="w-6 h-6 cursor-pointer">
+            <div class="flex items-center p-4 rounded-lg mb-4 ${borderClass}">
+              <div class="flex flex-col items-center mr-4 space-y-2 w-8">
+                <input type="checkbox" onchange="toggleStatus('${item.id}', 'pending')" class="w-6 h-6 cursor-pointer rounded">
                 <button onclick="editItem('${item.id}')" class="text-blue-500 text-sm hover:underline">編輯</button>
               </div>
-              <div class="flex-1">
+              <div class="flex-1 overflow-hidden">
                 <div class="flex justify-between items-start">
-                  <div>
-                    <span class="text-xs font-semibold bg-gray-200 px-2 py-1 rounded mr-2">${item.category || '未分類'}</span>
-                    <h3 class="text-lg font-bold inline-block">${item.name}</h3>
-                    <p class="text-sm text-gray-600 mt-1">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
+                  <div class="pr-2">
+                    <div class="mb-2 flex flex-wrap gap-1">
+                      ${overdueBadge}
+                      <span class="text-xs font-semibold bg-gray-200 px-2 py-1 rounded text-gray-700">${item.category || '未分類'}</span>
+                    </div>
+                    <h3 class="text-lg font-bold leading-tight">${item.name}</h3>
+                    <p class="text-sm text-gray-600 mt-1 truncate">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
                   </div>
-                  <div class="text-right whitespace-nowrap">
-                    <p class="text-sm font-medium text-gray-500">出貨: ${item.expectedDate || '未知'}</p>
-                    <p class="text-lg font-bold text-red-600 mt-1">尾款: ${currencySymbol}${item.balance}</p>
+                  <div class="text-right whitespace-nowrap pl-2 border-l border-gray-200">
+                    <p class="text-sm font-medium text-gray-500">出貨: <span class="font-bold ${overdue ? 'text-red-500' : 'text-gray-700'}">${item.expectedDate || '未知'}</span></p>
+                    <p class="text-lg font-bold text-red-600 mt-2">尾: ${currencySymbol}${item.balance}</p>
                   </div>
                 </div>
               </div>
@@ -254,14 +298,17 @@
         });
       }
 
+      // 更新總額文字
       let totalStrings = [];
       if (totals.HKD > 0) totalStrings.push(`HKD $${totals.HKD}`);
       if (totals.RMB > 0) totalStrings.push(`RMB ¥${totals.RMB}`);
       if (totals.JPY > 0) totalStrings.push(`JPY ¥${totals.JPY}`);
       let totalDisplayText = totalStrings.length > 0 ? totalStrings.join(' / ') : '$0';
       
-      document.getElementById('month-total').innerText = `🔥 今月 (${now.getMonth() + 1}月) 預計需付尾款總額：${totalDisplayText}`;
+      let monthLabel = selectedMonth ? `${selectedMonth}` : '所有未取單';
+      document.getElementById('month-total').innerText = `🔥 ${monthLabel} 需付尾款：${totalDisplayText}`;
 
+      // 已取貨清單
       receivedItems.forEach(item => {
         receivedList.innerHTML += `
           <div class="flex items-center p-4 border rounded-lg shadow-sm bg-gray-50">
@@ -279,16 +326,11 @@
       document.getElementById('category-list').innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
       document.getElementById('manufacturer-list').innerHTML = Array.from(manufacturers).map(m => `<option value="${m}">`).join('');
       document.getElementById('shop-list').innerHTML = Array.from(shops).map(s => `<option value="${s}">`).join('');
-    }
+    };
 
     document.getElementById('toy-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      // 🛑 防呆：確認有使用者登入才能儲存
-      if(!currentUser) {
-        alert("請先登入！");
-        return;
-      }
+      if(!currentUser) return alert("請先登入！");
 
       const formData = {
         name: document.getElementById('name').value,
@@ -299,7 +341,7 @@
         depositType: document.getElementById('depositType').value,
         currency: document.getElementById('currency').value,
         balance: Number(document.getElementById('balance').value),
-        userId: currentUser.uid // ✨ 儲存時自動綁定目前登入者的 ID
+        userId: currentUser.uid
       };
 
       const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -318,10 +360,9 @@
           await addDoc(collection(db, "toys"), formData);
           document.getElementById('toy-form').reset();
           checkDepositType(); 
-          alert('✅ 玩具新增成功！可以繼續輸入下一筆。');
+          alert('✅ 玩具新增成功！');
         }
       } catch (error) {
-        console.error("儲存失敗：", error);
         alert('儲存失敗，請檢查權限或網路連線');
       } finally {
         submitBtn.innerText = originalText;
