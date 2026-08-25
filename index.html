@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📦 玩具預訂管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="玩具預訂">
+  <!-- 這是放在手機桌面的圖示 (先借用一個免費的紙箱圖示，以後可以換) -->
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063822.png">
 </head>
 <body class="bg-gray-100 font-sans text-gray-800 min-h-screen">
 
@@ -13,7 +19,7 @@
     <div class="bg-white p-8 rounded-lg shadow-md text-center max-w-sm w-full mx-4">
       <h1 class="text-3xl font-bold mb-2">📦</h1>
       <h2 class="text-xl font-bold mb-6">玩具預訂管理系統</h2>
-      <p class="text-sm text-gray-500 mb-6">請登入以管理您專屬的預訂清單</p>
+      <p class="text-sm text-gray-500 mb-6">請登入以管理專屬的預訂清單</p>
       <button id="login-btn" class="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded shadow hover:bg-gray-50 transition">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6 mr-3" />
         使用 Google 帳號登入
