@@ -85,38 +85,190 @@
 
   <!-- 引入 Firebase 模組與邏輯 -->
   <script type="module">
-    // 1. Firebase 載入 (直接從雲端載入，不須安裝)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // 2. Firebase 設定 (之後申請好再填入)
+    // 👇 1. 把你剛剛從 Firebase 複製的 firebaseConfig 貼在這邊覆蓋掉這段：
     const firebaseConfig = {
-      apiKey: "稍後填寫",
-      projectId: "稍後填寫",
-    };
+  apiKey: "AIzaSyAHpp9FXkSGEQ15qpwRdVNflQqUz-p1OYg",
+  authDomain: "preoder-list.firebaseapp.com",
+  databaseURL: "https://preoder-list-default-rtdb.firebaseio.com",
+  projectId: "preoder-list",
+  storageBucket: "preoder-list.firebasestorage.app",
+  messagingSenderId: "630060183430",
+  appId: "1:630060183430:web:1d8a014becd9d280e88607"
+};
+    // 👆 ==========================================
 
-    // 為了讓你在還沒設定 Firebase 前能看到畫面，我們這裡先用假資料測試，等設定好資料庫再切換
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
     let items = [];
     let editingId = null;
 
-    // ----- 介面邏輯 ----- //
+    // 2. 即時監聽資料庫
+    onSnapshot(collection(db, "toys"), (snapshot) => {
+      items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderLists();
+    });
+
+    // 3. 渲染清單 (包含過濾、排序、今月尾款計算與 datalist 建議)
+    function renderLists() {
+      const pendingList = document.getElementById('pending-list');
+      const receivedList = document.getElementById('received-list');
+      pendingList.innerHTML = '';
+      receivedList.innerHTML = '';
+
+      let thisMonthTotal = 0;
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // 收集 datalist 選項
+      const categories = new Set();
+      const manufacturers = new Set();
+      const shops = new Set();
+
+      const getSortValue = (dateStr) => {
+        if (!dateStr || dateStr === '未知') return '9999-99-99';
+        if (dateStr.length === 4) return `${dateStr}-12-31`;
+        if (dateStr.length === 7) return `${dateStr}-31`;
+        return dateStr;
+      };
+
+      const pendingItems = items.filter(i => i.status === 'pending')
+        .sort((a, b) => getSortValue(a.expectedDate).localeCompare(getSortValue(b.expectedDate)));
+
+      const receivedItems = items.filter(i => i.status === 'received')
+        .sort((a, b) => getSortValue(b.expectedDate).localeCompare(getSortValue(a.expectedDate)));
+
+      // 渲染預訂清單
+      if (pendingItems.length === 0) {
+        pendingList.innerHTML = '<p class="text-center text-gray-500 py-10">目前沒有待收貨的玩具喔！</p>';
+      } else {
+        pendingItems.forEach(item => {
+          if(item.category) categories.add(item.category);
+          if(item.manufacturer) manufacturers.add(item.manufacturer);
+          if(item.shop) shops.add(item.shop);
+
+          if (item.expectedDate && item.expectedDate.startsWith(currentYearMonth)) {
+             thisMonthTotal += Number(item.balance || 0);
+          }
+
+          pendingList.innerHTML += `
+            <div class="flex items-center p-4 border rounded-lg shadow-sm bg-white">
+              <div class="flex flex-col items-center mr-4 space-y-2">
+                <input type="checkbox" onchange="toggleStatus('${item.id}', 'pending')" class="w-6 h-6 cursor-pointer">
+                <button onclick="editItem('${item.id}')" class="text-blue-500 text-sm hover:underline">編輯</button>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="text-xs font-semibold bg-gray-200 px-2 py-1 rounded mr-2">${item.category || '未分類'}</span>
+                    <h3 class="text-lg font-bold inline-block">${item.name}</h3>
+                    <p class="text-sm text-gray-600 mt-1">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-sm font-medium text-gray-500">出貨: ${item.expectedDate || '未知'}</p>
+                    <p class="text-lg font-bold text-red-600 mt-1">尾款: $${item.balance}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      document.getElementById('month-total').innerText = `🔥 今月 (${now.getMonth() + 1}月) 預計需付尾款總額：$${thisMonthTotal}`;
+
+      // 渲染已取貨清單
+      receivedItems.forEach(item => {
+        receivedList.innerHTML += `
+          <div class="flex items-center p-4 border rounded-lg shadow-sm bg-gray-50">
+            <div class="mr-4">
+              <input type="checkbox" checked onchange="toggleStatus('${item.id}', 'received')" class="w-6 h-6 cursor-pointer">
+            </div>
+            <div class="flex-1">
+              <span class="line-through text-gray-500 font-bold">${item.name}</span>
+              <p class="text-sm text-gray-500">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
+            </div>
+          </div>
+        `;
+      });
+
+      // 更新 datalist (自動完成選單)
+      document.getElementById('category-list').innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
+      document.getElementById('manufacturer-list').innerHTML = Array.from(manufacturers).map(m => `<option value="${m}">`).join('');
+      document.getElementById('shop-list').innerHTML = Array.from(shops).map(s => `<option value="${s}">`).join('');
+    }
+
+    // 4. 表單提交 (新增/更新資料庫)
+    document.getElementById('toy-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = {
+        name: document.getElementById('name').value,
+        category: document.getElementById('category').value,
+        manufacturer: document.getElementById('manufacturer').value,
+        shop: document.getElementById('shop').value,
+        expectedDate: document.getElementById('expectedDate').value,
+        depositType: document.getElementById('depositType').value,
+        balance: Number(document.getElementById('balance').value),
+      };
+
+      if (editingId) {
+        const existingItem = items.find(i => i.id === editingId);
+        formData.status = existingItem ? existingItem.status : 'pending';
+        await updateDoc(doc(db, "toys", editingId), formData);
+      } else {
+        formData.status = 'pending';
+        await addDoc(collection(db, "toys"), formData);
+      }
+
+      switchTab('pending');
+    });
+
+    // 暴露給 HTML onClick 使用的全域函數
+    window.toggleStatus = async function(id, currentStatus) {
+      const newStatus = currentStatus === 'pending' ? 'received' : 'pending';
+      await updateDoc(doc(db, "toys", id), { status: newStatus });
+    };
+
+    window.editItem = function(id) {
+      const item = items.find(i => i.id === id);
+      if(!item) return;
+      editingId = id;
+      document.getElementById('name').value = item.name || '';
+      document.getElementById('category').value = item.category || '';
+      document.getElementById('manufacturer').value = item.manufacturer || '';
+      document.getElementById('shop').value = item.shop || '';
+      document.getElementById('expectedDate').value = item.expectedDate || '';
+      document.getElementById('depositType').value = item.depositType || 'partial';
+      document.getElementById('balance').value = item.balance || 0;
+      
+      checkDepositType();
+      switchTab('form');
+      document.getElementById('tab-form').innerText = '✏️ 編輯玩具';
+    };
+
+    // 基礎介面邏輯
     window.switchTab = function(tabName) {
-      // 隱藏所有頁面
       document.getElementById('page-pending').classList.add('hidden');
       document.getElementById('page-received').classList.add('hidden');
       document.getElementById('page-form').classList.add('hidden');
       
-      // 重設按鈕顏色
       ['pending', 'received', 'form'].forEach(t => {
         let btn = document.getElementById('tab-' + t);
         btn.className = "px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300";
       });
 
-      // 顯示選擇的頁面與高亮按鈕
       document.getElementById('page-' + tabName).classList.remove('hidden');
       document.getElementById('tab-' + tabName).className = "px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold";
 
-      if(tabName !== 'form') resetForm();
+      if(tabName !== 'form') {
+         document.getElementById('toy-form').reset();
+         editingId = null;
+         checkDepositType();
+         document.getElementById('tab-form').innerText = '➕ 新增/編輯玩具';
+      }
     };
 
     window.checkDepositType = function() {
@@ -131,12 +283,6 @@
         balanceInput.classList.remove('bg-gray-100');
       }
     };
-
-    function resetForm() {
-      document.getElementById('toy-form').reset();
-      editingId = null;
-      checkDepositType();
-    }
   </script>
 </body>
 </html>
