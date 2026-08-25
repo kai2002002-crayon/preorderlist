@@ -1,6 +1,6 @@
 {
-  "name": "玩具預訂管理系統",
-  "short_name": "玩具預訂",
+  "name": "玩具訂單管理系統",
+  "short_name": "玩具訂單",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f3f4f6",
