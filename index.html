@@ -275,9 +275,9 @@
           const borderClass = overdue ? 'border-red-500 border-2 bg-red-50 shadow-md' : 'border border-gray-200 bg-white';
           const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
           
-          let currencySymbol = '$';
+          let currencySymbol = 'HKD';
           if(item.currency === 'RMB') currencySymbol = 'RMB';
-          if(item.currency === 'JPY') currencySymbol = '¥';
+          if(item.currency === 'JPY') currencySymbol = 'JPY';
 
           pendingList.innerHTML += `
             <div class="flex items-center p-4 rounded-lg mb-4 ${borderClass}">
