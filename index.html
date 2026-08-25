@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📦 玩具預訂管理系統</title>
-  <!-- 引入 Tailwind CSS 負責排版 -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 p-4 md:p-6 font-sans text-gray-800">
@@ -25,16 +24,13 @@
         <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 今月預計需付尾款總額：$0</h2>
       </div>
       <div id="pending-list" class="space-y-4">
-        <!-- 資料會透過 JavaScript 自動生成在這裡 -->
         <p class="text-gray-500 text-center py-4">資料載入中...</p>
       </div>
     </div>
 
     <!-- 已取貨清單頁面 -->
     <div id="page-received" class="hidden">
-      <div id="received-list" class="space-y-4 opacity-75">
-        <!-- 已取貨資料 -->
-      </div>
+      <div id="received-list" class="space-y-4 opacity-75"></div>
     </div>
 
     <!-- 新增/編輯表單頁面 -->
@@ -74,7 +70,15 @@
             </div>
             <div class="w-1/2">
               <label class="block text-sm font-medium mb-1">尾款金額</label>
-              <input type="number" id="balance" class="w-full border p-2 rounded" value="0">
+              <!-- 這裡新增了貨幣選擇 -->
+              <div class="flex space-x-2">
+                <select id="currency" class="border p-2 rounded bg-white w-1/3">
+                  <option value="HKD">HKD</option>
+                  <option value="RMB">RMB</option>
+                  <option value="JPY">JPY</option>
+                </select>
+                <input type="number" id="balance" class="w-full border p-2 rounded w-2/3" value="0">
+              </div>
             </div>
           </div>
         </div>
@@ -83,12 +87,11 @@
     </div>
   </div>
 
-  <!-- 引入 Firebase 模組與邏輯 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // 👇 1. 把你剛剛從 Firebase 複製的 firebaseConfig 貼在這邊覆蓋掉這段：
+    // 👇 1. 請再次把你的 firebaseConfig 貼在這裡覆蓋：
     const firebaseConfig = {
   apiKey: "AIzaSyAHpp9FXkSGEQ15qpwRdVNflQqUz-p1OYg",
   authDomain: "preoder-list.firebaseapp.com",
@@ -106,24 +109,22 @@
     let items = [];
     let editingId = null;
 
-    // 2. 即時監聽資料庫
     onSnapshot(collection(db, "toys"), (snapshot) => {
       items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       renderLists();
     });
 
-    // 3. 渲染清單 (包含過濾、排序、今月尾款計算與 datalist 建議)
     function renderLists() {
       const pendingList = document.getElementById('pending-list');
       const receivedList = document.getElementById('received-list');
       pendingList.innerHTML = '';
       receivedList.innerHTML = '';
 
-      let thisMonthTotal = 0;
+      // 分開紀錄不同貨幣的總數
+      let totals = { HKD: 0, RMB: 0, JPY: 0 };
       const now = new Date();
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // 收集 datalist 選項
       const categories = new Set();
       const manufacturers = new Set();
       const shops = new Set();
@@ -141,7 +142,6 @@
       const receivedItems = items.filter(i => i.status === 'received')
         .sort((a, b) => getSortValue(b.expectedDate).localeCompare(getSortValue(a.expectedDate)));
 
-      // 渲染預訂清單
       if (pendingItems.length === 0) {
         pendingList.innerHTML = '<p class="text-center text-gray-500 py-10">目前沒有待收貨的玩具喔！</p>';
       } else {
@@ -150,9 +150,18 @@
           if(item.manufacturer) manufacturers.add(item.manufacturer);
           if(item.shop) shops.add(item.shop);
 
+          // 計算今月尾款，依照貨幣分類
           if (item.expectedDate && item.expectedDate.startsWith(currentYearMonth)) {
-             thisMonthTotal += Number(item.balance || 0);
+             const currency = item.currency || 'HKD';
+             if (totals[currency] !== undefined) {
+                 totals[currency] += Number(item.balance || 0);
+             }
           }
+
+          // 顯示不同的貨幣符號
+          let currencySymbol = '$';
+          if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
+          if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
 
           pendingList.innerHTML += `
             <div class="flex items-center p-4 border rounded-lg shadow-sm bg-white">
@@ -167,9 +176,9 @@
                     <h3 class="text-lg font-bold inline-block">${item.name}</h3>
                     <p class="text-sm text-gray-600 mt-1">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
                   </div>
-                  <div class="text-right">
+                  <div class="text-right whitespace-nowrap">
                     <p class="text-sm font-medium text-gray-500">出貨: ${item.expectedDate || '未知'}</p>
-                    <p class="text-lg font-bold text-red-600 mt-1">尾款: $${item.balance}</p>
+                    <p class="text-lg font-bold text-red-600 mt-1">尾款: ${currencySymbol}${item.balance}</p>
                   </div>
                 </div>
               </div>
@@ -178,9 +187,15 @@
         });
       }
 
-      document.getElementById('month-total').innerText = `🔥 今月 (${now.getMonth() + 1}月) 預計需付尾款總額：$${thisMonthTotal}`;
+      // 組合今月尾款顯示字串
+      let totalStrings = [];
+      if (totals.HKD > 0) totalStrings.push(`HKD $${totals.HKD}`);
+      if (totals.RMB > 0) totalStrings.push(`RMB ¥${totals.RMB}`);
+      if (totals.JPY > 0) totalStrings.push(`JPY ¥${totals.JPY}`);
+      let totalDisplayText = totalStrings.length > 0 ? totalStrings.join(' / ') : '$0';
+      
+      document.getElementById('month-total').innerText = `🔥 今月 (${now.getMonth() + 1}月) 預計需付尾款總額：${totalDisplayText}`;
 
-      // 渲染已取貨清單
       receivedItems.forEach(item => {
         receivedList.innerHTML += `
           <div class="flex items-center p-4 border rounded-lg shadow-sm bg-gray-50">
@@ -195,13 +210,11 @@
         `;
       });
 
-      // 更新 datalist (自動完成選單)
       document.getElementById('category-list').innerHTML = Array.from(categories).map(c => `<option value="${c}">`).join('');
       document.getElementById('manufacturer-list').innerHTML = Array.from(manufacturers).map(m => `<option value="${m}">`).join('');
       document.getElementById('shop-list').innerHTML = Array.from(shops).map(s => `<option value="${s}">`).join('');
     }
 
-    // 4. 表單提交 (新增/更新資料庫)
     document.getElementById('toy-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = {
@@ -211,6 +224,7 @@
         shop: document.getElementById('shop').value,
         expectedDate: document.getElementById('expectedDate').value,
         depositType: document.getElementById('depositType').value,
+        currency: document.getElementById('currency').value,
         balance: Number(document.getElementById('balance').value),
       };
 
@@ -226,7 +240,6 @@
       switchTab('pending');
     });
 
-    // 暴露給 HTML onClick 使用的全域函數
     window.toggleStatus = async function(id, currentStatus) {
       const newStatus = currentStatus === 'pending' ? 'received' : 'pending';
       await updateDoc(doc(db, "toys", id), { status: newStatus });
@@ -242,6 +255,7 @@
       document.getElementById('shop').value = item.shop || '';
       document.getElementById('expectedDate').value = item.expectedDate || '';
       document.getElementById('depositType').value = item.depositType || 'partial';
+      document.getElementById('currency').value = item.currency || 'HKD';
       document.getElementById('balance').value = item.balance || 0;
       
       checkDepositType();
@@ -249,7 +263,6 @@
       document.getElementById('tab-form').innerText = '✏️ 編輯玩具';
     };
 
-    // 基礎介面邏輯
     window.switchTab = function(tabName) {
       document.getElementById('page-pending').classList.add('hidden');
       document.getElementById('page-received').classList.add('hidden');
@@ -274,13 +287,18 @@
     window.checkDepositType = function() {
       let type = document.getElementById('depositType').value;
       let balanceInput = document.getElementById('balance');
+      let currencyInput = document.getElementById('currency');
       if(type === 'full') {
         balanceInput.value = 0;
         balanceInput.disabled = true;
+        currencyInput.disabled = true;
         balanceInput.classList.add('bg-gray-100');
+        currencyInput.classList.add('bg-gray-100');
       } else {
         balanceInput.disabled = false;
+        currencyInput.disabled = false;
         balanceInput.classList.remove('bg-gray-100');
+        currencyInput.classList.remove('bg-gray-100');
       }
     };
   </script>
