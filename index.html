@@ -215,7 +215,7 @@
       document.getElementById('shop-list').innerHTML = Array.from(shops).map(s => `<option value="${s}">`).join('');
     }
 
-    document.getElementById('toy-form').addEventListener('submit', async (e) => {
+   document.getElementById('toy-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = {
         name: document.getElementById('name').value,
@@ -228,16 +228,39 @@
         balance: Number(document.getElementById('balance').value),
       };
 
-      if (editingId) {
-        const existingItem = items.find(i => i.id === editingId);
-        formData.status = existingItem ? existingItem.status : 'pending';
-        await updateDoc(doc(db, "toys", editingId), formData);
-      } else {
-        formData.status = 'pending';
-        await addDoc(collection(db, "toys"), formData);
-      }
+      // 顯示儲存中的提示 (可選，讓使用者知道有按成功)
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerText;
+      submitBtn.innerText = '儲存中...';
+      submitBtn.disabled = true;
 
-      switchTab('pending');
+      try {
+        if (editingId) {
+          const existingItem = items.find(i => i.id === editingId);
+          formData.status = existingItem ? existingItem.status : 'pending';
+          await updateDoc(doc(db, "toys", editingId), formData);
+          
+          // 如果是「編輯」模式，儲存後跳回清單比較合理
+          switchTab('pending'); 
+        } else {
+          formData.status = 'pending';
+          await addDoc(collection(db, "toys"), formData);
+          
+          // ✨ 新增這行：如果是「新增」模式，儲存後清空表單，並停留在原頁面
+          document.getElementById('toy-form').reset();
+          checkDepositType(); // 重新檢查一次訂金下拉選單的狀態
+          
+          // 可以在畫面上給個小回饋
+          alert('✅ 玩具新增成功！可以繼續輸入下一筆。');
+        }
+      } catch (error) {
+        console.error("儲存失敗：", error);
+        alert('儲存失敗，請檢查網路連線');
+      } finally {
+        // 恢復按鈕狀態
+        submitBtn.innerText = originalText;
+        submitBtn.disabled = false;
+      }
     });
 
     window.toggleStatus = async function(id, currentStatus) {
