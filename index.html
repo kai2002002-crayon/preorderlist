@@ -276,8 +276,8 @@
           const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
           
           let currencySymbol = '$';
-          if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
-          if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
+          if(item.currency === 'RMB') currencySymbol = 'RMB';
+          if(item.currency === 'JPY') currencySymbol = '¥';
 
           pendingList.innerHTML += `
             <div class="flex items-center p-4 rounded-lg mb-4 ${borderClass}">
