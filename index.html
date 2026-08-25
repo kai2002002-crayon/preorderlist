@@ -6,112 +6,177 @@
   <title>📦 玩具預訂管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-4 md:p-6 font-sans text-gray-800">
+<body class="bg-gray-100 font-sans text-gray-800 min-h-screen">
 
-  <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
-    <h1 class="text-2xl font-bold mb-6 text-center">📦 玩具預訂管理系統</h1>
-
-    <!-- 分頁按鈕 -->
-    <div class="flex space-x-2 mb-6 border-b pb-2">
-      <button id="tab-pending" onclick="switchTab('pending')" class="px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold">預訂清單</button>
-      <button id="tab-received" onclick="switchTab('received')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">已取貨清單</button>
-      <button id="tab-form" onclick="switchTab('form')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">➕ 新增/編輯玩具</button>
+  <!-- 登入頁面 (預設顯示) -->
+  <div id="login-page" class="flex flex-col items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-md text-center max-w-sm w-full mx-4">
+      <h1 class="text-3xl font-bold mb-2">📦</h1>
+      <h2 class="text-xl font-bold mb-6">玩具預訂管理系統</h2>
+      <p class="text-sm text-gray-500 mb-6">請登入以管理您專屬的預訂清單</p>
+      <button id="login-btn" class="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-4 rounded shadow hover:bg-gray-50 transition">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6 mr-3" />
+        使用 Google 帳號登入
+      </button>
     </div>
+  </div>
 
-    <!-- 預訂清單頁面 -->
-    <div id="page-pending">
-      <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
-        <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 今月預計需付尾款總額：$0</h2>
+  <!-- 系統主介面 (預設隱藏，登入後顯示) -->
+  <div id="main-app" class="hidden max-w-3xl mx-auto p-4 md:p-6">
+    
+    <!-- 頂部資訊與登出 -->
+    <div class="bg-white p-4 rounded-lg shadow-md flex justify-between items-center mb-6">
+      <h1 class="text-xl md:text-2xl font-bold">📦 玩具預訂管理系統</h1>
+      <div class="flex items-center">
+        <img id="user-pic" class="w-8 h-8 rounded-full mr-3 border" src="" alt="User">
+        <button id="logout-btn" class="text-sm font-bold text-red-500 hover:text-red-700">登出</button>
       </div>
-      <div id="pending-list" class="space-y-4">
-        <p class="text-gray-500 text-center py-4">資料載入中...</p>
+    </div>
+
+    <!-- 主內容區塊 -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <!-- 分頁按鈕 -->
+      <div class="flex space-x-2 mb-6 border-b pb-2">
+        <button id="tab-pending" onclick="switchTab('pending')" class="px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold">預訂清單</button>
+        <button id="tab-received" onclick="switchTab('received')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">已取貨</button>
+        <button id="tab-form" onclick="switchTab('form')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">➕ 新增</button>
       </div>
-    </div>
 
-    <!-- 已取貨清單頁面 -->
-    <div id="page-received" class="hidden">
-      <div id="received-list" class="space-y-4 opacity-75"></div>
-    </div>
+      <!-- 預訂清單頁面 -->
+      <div id="page-pending">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+          <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 今月預計需付尾款總額：$0</h2>
+        </div>
+        <div id="pending-list" class="space-y-4">
+          <p class="text-gray-500 text-center py-4">資料載入中...</p>
+        </div>
+      </div>
 
-    <!-- 新增/編輯表單頁面 -->
-    <div id="page-form" class="hidden">
-      <form id="toy-form" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium mb-1">玩具名稱 *</label>
-            <input type="text" id="name" required class="w-full border p-2 rounded">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">種類</label>
-            <input type="text" id="category" list="category-list" class="w-full border p-2 rounded">
-            <datalist id="category-list"></datalist>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">廠商</label>
-            <input type="text" id="manufacturer" list="manufacturer-list" class="w-full border p-2 rounded">
-            <datalist id="manufacturer-list"></datalist>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">訂購店舖</label>
-            <input type="text" id="shop" list="shop-list" class="w-full border p-2 rounded">
-            <datalist id="shop-list"></datalist>
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">預計出貨日期 (如: 2026-10)</label>
-            <input type="text" id="expectedDate" class="w-full border p-2 rounded">
-          </div>
-          <div class="flex space-x-4">
-            <div class="w-1/2">
-              <label class="block text-sm font-medium mb-1">訂金形式</label>
-              <select id="depositType" class="w-full border p-2 rounded" onchange="checkDepositType()">
-                <option value="partial">部份訂金</option>
-                <option value="full">全款</option>
-              </select>
+      <!-- 已取貨清單頁面 -->
+      <div id="page-received" class="hidden">
+        <div id="received-list" class="space-y-4 opacity-75"></div>
+      </div>
+
+      <!-- 新增/編輯表單頁面 -->
+      <div id="page-form" class="hidden">
+        <form id="toy-form" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">玩具名稱 *</label>
+              <input type="text" id="name" required class="w-full border p-2 rounded">
             </div>
-            <div class="w-1/2">
-              <label class="block text-sm font-medium mb-1">尾款金額</label>
-              <!-- 這裡新增了貨幣選擇 -->
-              <div class="flex space-x-2">
-                <select id="currency" class="border p-2 rounded bg-white w-1/3">
-                  <option value="HKD">HKD</option>
-                  <option value="RMB">RMB</option>
-                  <option value="JPY">JPY</option>
+            <div>
+              <label class="block text-sm font-medium mb-1">種類</label>
+              <input type="text" id="category" list="category-list" class="w-full border p-2 rounded">
+              <datalist id="category-list"></datalist>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">廠商</label>
+              <input type="text" id="manufacturer" list="manufacturer-list" class="w-full border p-2 rounded">
+              <datalist id="manufacturer-list"></datalist>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">訂購店舖</label>
+              <input type="text" id="shop" list="shop-list" class="w-full border p-2 rounded">
+              <datalist id="shop-list"></datalist>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">預計出貨日期 (如: 2026-10)</label>
+              <input type="text" id="expectedDate" class="w-full border p-2 rounded">
+            </div>
+            <div class="flex space-x-4">
+              <div class="w-1/2">
+                <label class="block text-sm font-medium mb-1">訂金形式</label>
+                <select id="depositType" class="w-full border p-2 rounded" onchange="checkDepositType()">
+                  <option value="partial">部份訂金</option>
+                  <option value="full">全款</option>
                 </select>
-                <input type="number" id="balance" class="w-full border p-2 rounded w-2/3" value="0">
+              </div>
+              <div class="w-1/2">
+                <label class="block text-sm font-medium mb-1">尾款金額</label>
+                <div class="flex space-x-2">
+                  <select id="currency" class="border p-2 rounded bg-white w-1/3">
+                    <option value="HKD">HKD</option>
+                    <option value="RMB">RMB</option>
+                    <option value="JPY">JPY</option>
+                  </select>
+                  <input type="number" id="balance" class="w-full border p-2 rounded w-2/3" value="0">
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">儲存資料</button>
-      </form>
+          <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">儲存資料</button>
+        </form>
+      </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    // ✨ 新增了 Auth 模組
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
-    // 👇 1. 請再次把你的 firebaseConfig 貼在這裡覆蓋：
+    // 👇 1. 填入你的 firebaseConfig
     const firebaseConfig = {
-  apiKey: "AIzaSyB3QHQmQSIfr5muTomqXp_I_Aijp9kGcLA",
-  authDomain: "preorder-list-f23f2.firebaseapp.com",
-  projectId: "preorder-list-f23f2",
-  storageBucket: "preorder-list-f23f2.firebasestorage.app",
-  messagingSenderId: "600921326079",
-  appId: "1:600921326079:web:de863e6602b5f4a44a27ca"
-};
-    // 👆 ==========================================
+      apiKey: "AIzaSyB3QHQmQSIfr5muTomqXp_I_Aijp9kGcLA",
+      authDomain: "preorder-list-f23f2.firebaseapp.com",
+      projectId: "preorder-list-f23f2",
+      storageBucket: "preorder-list-f23f2.firebasestorage.app",
+      messagingSenderId: "600921326079",
+      appId: "1:600921326079:web:de863e6602b5f4a44a27ca"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
     let items = [];
     let editingId = null;
+    let currentUser = null; 
+    let unsubscribeSnapshot = null; // 用來在登出時取消監聽資料庫
 
-    onSnapshot(collection(db, "toys"), (snapshot) => {
-      items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderLists();
+    // 🌟 處理登入狀態改變
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        // 登入成功：隱藏登入頁，顯示主介面，並載入頭像
+        document.getElementById('login-page').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('user-pic').src = user.photoURL;
+
+        // 載入該使用者的獨立資料！ (where 條件過濾)
+        const q = query(collection(db, "toys"), where("userId", "==", user.uid));
+        
+        unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+          items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          renderLists();
+        });
+      } else {
+        currentUser = null;
+        // 登出：隱藏主介面，顯示登入頁，並清除資料庫監聽
+        document.getElementById('login-page').classList.remove('hidden');
+        document.getElementById('main-app').classList.add('hidden');
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+        items = [];
+      }
     });
+
+    // 登入按鈕事件
+    document.getElementById('login-btn').addEventListener('click', () => {
+      signInWithPopup(auth, provider).catch(error => {
+        console.error("登入失敗", error);
+        alert("登入失敗，請稍後再試。");
+      });
+    });
+
+    // 登出按鈕事件
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      signOut(auth);
+    });
+
+    // ----- 下方的清單渲染與表單邏輯基本不變 ----- //
 
     function renderLists() {
       const pendingList = document.getElementById('pending-list');
@@ -119,7 +184,6 @@
       pendingList.innerHTML = '';
       receivedList.innerHTML = '';
 
-      // 分開紀錄不同貨幣的總數
       let totals = { HKD: 0, RMB: 0, JPY: 0 };
       const now = new Date();
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -149,7 +213,6 @@
           if(item.manufacturer) manufacturers.add(item.manufacturer);
           if(item.shop) shops.add(item.shop);
 
-          // 計算今月尾款，依照貨幣分類
           if (item.expectedDate && item.expectedDate.startsWith(currentYearMonth)) {
              const currency = item.currency || 'HKD';
              if (totals[currency] !== undefined) {
@@ -157,7 +220,6 @@
              }
           }
 
-          // 顯示不同的貨幣符號
           let currencySymbol = '$';
           if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
           if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
@@ -186,7 +248,6 @@
         });
       }
 
-      // 組合今月尾款顯示字串
       let totalStrings = [];
       if (totals.HKD > 0) totalStrings.push(`HKD $${totals.HKD}`);
       if (totals.RMB > 0) totalStrings.push(`RMB ¥${totals.RMB}`);
@@ -214,8 +275,15 @@
       document.getElementById('shop-list').innerHTML = Array.from(shops).map(s => `<option value="${s}">`).join('');
     }
 
-   document.getElementById('toy-form').addEventListener('submit', async (e) => {
+    document.getElementById('toy-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // 🛑 防呆：確認有使用者登入才能儲存
+      if(!currentUser) {
+        alert("請先登入！");
+        return;
+      }
+
       const formData = {
         name: document.getElementById('name').value,
         category: document.getElementById('category').value,
@@ -225,9 +293,9 @@
         depositType: document.getElementById('depositType').value,
         currency: document.getElementById('currency').value,
         balance: Number(document.getElementById('balance').value),
+        userId: currentUser.uid // ✨ 儲存時自動綁定目前登入者的 ID
       };
 
-      // 顯示儲存中的提示 (可選，讓使用者知道有按成功)
       const submitBtn = e.target.querySelector('button[type="submit"]');
       const originalText = submitBtn.innerText;
       submitBtn.innerText = '儲存中...';
@@ -238,25 +306,18 @@
           const existingItem = items.find(i => i.id === editingId);
           formData.status = existingItem ? existingItem.status : 'pending';
           await updateDoc(doc(db, "toys", editingId), formData);
-          
-          // 如果是「編輯」模式，儲存後跳回清單比較合理
           switchTab('pending'); 
         } else {
           formData.status = 'pending';
           await addDoc(collection(db, "toys"), formData);
-          
-          // ✨ 新增這行：如果是「新增」模式，儲存後清空表單，並停留在原頁面
           document.getElementById('toy-form').reset();
-          checkDepositType(); // 重新檢查一次訂金下拉選單的狀態
-          
-          // 可以在畫面上給個小回饋
+          checkDepositType(); 
           alert('✅ 玩具新增成功！可以繼續輸入下一筆。');
         }
       } catch (error) {
         console.error("儲存失敗：", error);
-        alert('儲存失敗，請檢查網路連線');
+        alert('儲存失敗，請檢查權限或網路連線');
       } finally {
-        // 恢復按鈕狀態
         submitBtn.innerText = originalText;
         submitBtn.disabled = false;
       }
@@ -302,7 +363,7 @@
          document.getElementById('toy-form').reset();
          editingId = null;
          checkDepositType();
-         document.getElementById('tab-form').innerText = '➕ 新增/編輯玩具';
+         document.getElementById('tab-form').innerText = '➕ 新增';
       }
     };
 
