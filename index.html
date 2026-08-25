@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📦 玩具預訂管理系統</title>
+  <!-- 引入 Tailwind CSS 負責排版 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4 md:p-6 font-sans text-gray-800">
+
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-6 text-center">📦 玩具預訂管理系統</h1>
+
+    <!-- 分頁按鈕 -->
+    <div class="flex space-x-2 mb-6 border-b pb-2">
+      <button id="tab-pending" onclick="switchTab('pending')" class="px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold">預訂清單</button>
+      <button id="tab-received" onclick="switchTab('received')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">已取貨清單</button>
+      <button id="tab-form" onclick="switchTab('form')" class="px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300">➕ 新增/編輯玩具</button>
+    </div>
+
+    <!-- 預訂清單頁面 -->
+    <div id="page-pending">
+      <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+        <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 今月預計需付尾款總額：$0</h2>
+      </div>
+      <div id="pending-list" class="space-y-4">
+        <!-- 資料會透過 JavaScript 自動生成在這裡 -->
+        <p class="text-gray-500 text-center py-4">資料載入中...</p>
+      </div>
+    </div>
+
+    <!-- 已取貨清單頁面 -->
+    <div id="page-received" class="hidden">
+      <div id="received-list" class="space-y-4 opacity-75">
+        <!-- 已取貨資料 -->
+      </div>
+    </div>
+
+    <!-- 新增/編輯表單頁面 -->
+    <div id="page-form" class="hidden">
+      <form id="toy-form" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">玩具名稱 *</label>
+            <input type="text" id="name" required class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">種類</label>
+            <input type="text" id="category" list="category-list" class="w-full border p-2 rounded">
+            <datalist id="category-list"></datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">廠商</label>
+            <input type="text" id="manufacturer" list="manufacturer-list" class="w-full border p-2 rounded">
+            <datalist id="manufacturer-list"></datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">訂購店舖</label>
+            <input type="text" id="shop" list="shop-list" class="w-full border p-2 rounded">
+            <datalist id="shop-list"></datalist>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">預計出貨日期 (如: 2026-10)</label>
+            <input type="text" id="expectedDate" class="w-full border p-2 rounded">
+          </div>
+          <div class="flex space-x-4">
+            <div class="w-1/2">
+              <label class="block text-sm font-medium mb-1">訂金形式</label>
+              <select id="depositType" class="w-full border p-2 rounded" onchange="checkDepositType()">
+                <option value="partial">部份訂金</option>
+                <option value="full">全款</option>
+              </select>
+            </div>
+            <div class="w-1/2">
+              <label class="block text-sm font-medium mb-1">尾款金額</label>
+              <input type="number" id="balance" class="w-full border p-2 rounded" value="0">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">儲存資料</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 引入 Firebase 模組與邏輯 -->
+  <script type="module">
+    // 1. Firebase 載入 (直接從雲端載入，不須安裝)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, addDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // 2. Firebase 設定 (之後申請好再填入)
+    const firebaseConfig = {
+      apiKey: "稍後填寫",
+      projectId: "稍後填寫",
+    };
+
+    // 為了讓你在還沒設定 Firebase 前能看到畫面，我們這裡先用假資料測試，等設定好資料庫再切換
+    let items = [];
+    let editingId = null;
+
+    // ----- 介面邏輯 ----- //
+    window.switchTab = function(tabName) {
+      // 隱藏所有頁面
+      document.getElementById('page-pending').classList.add('hidden');
+      document.getElementById('page-received').classList.add('hidden');
+      document.getElementById('page-form').classList.add('hidden');
+      
+      // 重設按鈕顏色
+      ['pending', 'received', 'form'].forEach(t => {
+        let btn = document.getElementById('tab-' + t);
+        btn.className = "px-4 py-2 rounded-t-lg bg-gray-200 text-gray-700 hover:bg-gray-300";
+      });
+
+      // 顯示選擇的頁面與高亮按鈕
+      document.getElementById('page-' + tabName).classList.remove('hidden');
+      document.getElementById('tab-' + tabName).className = "px-4 py-2 rounded-t-lg bg-blue-600 text-white font-bold";
+
+      if(tabName !== 'form') resetForm();
+    };
+
+    window.checkDepositType = function() {
+      let type = document.getElementById('depositType').value;
+      let balanceInput = document.getElementById('balance');
+      if(type === 'full') {
+        balanceInput.value = 0;
+        balanceInput.disabled = true;
+        balanceInput.classList.add('bg-gray-100');
+      } else {
+        balanceInput.disabled = false;
+        balanceInput.classList.remove('bg-gray-100');
+      }
+    };
+
+    function resetForm() {
+      document.getElementById('toy-form').reset();
+      editingId = null;
+      checkDepositType();
+    }
+  </script>
+</body>
+</html>
