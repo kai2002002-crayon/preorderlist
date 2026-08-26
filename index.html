@@ -329,9 +329,9 @@
         const borderClass = overdue ? 'border-red-500 border-2 bg-red-50 shadow-md' : 'border border-gray-200 bg-white';
         const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
         
-        let currencySymbol = '$';
-        if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
-        if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
+        let currencySymbol = 'HKD';
+        if(item.currency === 'RMB') currencySymbol = 'RMB';
+        if(item.currency === 'JPY') currencySymbol = 'JPY';
 
         // ✨ 判斷是否有相片，若有則生成 <img> 標籤
         let imageTag = item.image ? `<img src="${item.image}" class="w-16 h-16 object-cover rounded border mr-3 flex-shrink-0">` : '';
