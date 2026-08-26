@@ -82,6 +82,13 @@
               <label class="block text-sm font-medium mb-1">玩具名稱 *</label>
               <input type="text" id="name" required class="w-full border p-2 rounded">
             </div>
+            
+            <!-- ✨ 新增：數量欄位 -->
+            <div>
+              <label class="block text-sm font-medium mb-1">數量 *</label>
+              <input type="number" id="quantity" min="1" value="1" required class="w-full border p-2 rounded">
+            </div>
+
             <div>
               <label class="block text-sm font-medium mb-1">種類</label>
               <input type="text" id="category" list="category-list" class="w-full border p-2 rounded">
@@ -110,7 +117,7 @@
                 </select>
               </div>
               <div class="w-1/2">
-                <label class="block text-sm font-medium mb-1">尾款金額</label>
+                <label class="block text-sm font-medium mb-1">尾款總額</label>
                 <div class="flex space-x-2">
                   <select id="currency" class="border p-2 rounded bg-white w-2/5">
                     <option value="HKD">HKD</option>
@@ -119,6 +126,16 @@
                   </select>
                   <input type="number" id="balance" class="border p-2 rounded w-3/5" value="0">
                 </div>
+              </div>
+            </div>
+
+            <!-- ✨ 新增：相片上載欄位 (佔滿整行) -->
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium mb-1">玩具相片 (非必填)</label>
+              <input type="file" id="toy-image" accept="image/*" onchange="previewImage(event)" class="w-full border p-2 rounded bg-white text-sm">
+              <div id="image-preview-container" class="mt-2 hidden">
+                <img id="image-preview" class="w-24 h-24 object-cover rounded border shadow-sm" />
+                <button type="button" onclick="removeImage()" class="text-xs text-red-500 mt-1 hover:underline block">移除相片</button>
               </div>
             </div>
           </div>
@@ -153,7 +170,44 @@
     let editingId = null;
     let currentUser = null; 
     let unsubscribeSnapshot = null;
+    let base64Image = ""; // 儲存壓縮後的圖片字串
 
+    // 處理圖片上傳與自動壓縮
+    window.previewImage = function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const MAX_WIDTH = 400; // 限制最大寬度，確保能存進資料庫
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          base64Image = canvas.toDataURL('image/jpeg', 0.7); // 壓縮為 JPEG
+          document.getElementById('image-preview').src = base64Image;
+          document.getElementById('image-preview-container').classList.remove('hidden');
+        }
+        img.src = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    };
+
+    window.removeImage = function() {
+      base64Image = "";
+      document.getElementById('toy-image').value = "";
+      document.getElementById('image-preview-container').classList.add('hidden');
+    };
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
@@ -260,50 +314,60 @@
         pendingList.innerHTML = '<p class="text-center text-gray-500 py-10">這個月沒有預訂，或是資料已全部取貨！</p>';
       } else {
         allPendingToDisplay.forEach(item => {
-          if(item.category) categories.add(item.category);
-          if(item.manufacturer) manufacturers.add(item.manufacturer);
-          if(item.shop) shops.add(item.shop);
+        if(item.category) categories.add(item.category);
+        if(item.manufacturer) manufacturers.add(item.manufacturer);
+        if(item.shop) shops.add(item.shop);
 
-          // 只要是顯示在畫面上的（選定月＋逾期單），就加入尾款總數
-          const currency = item.currency || 'HKD';
-          if (totals[currency] !== undefined) {
-             totals[currency] += Number(item.balance || 0);
-          }
+        // 只要是顯示在畫面上的，就加入尾款總數
+        const currency = item.currency || 'HKD';
+        if (totals[currency] !== undefined) {
+           totals[currency] += Number(item.balance || 0);
+        }
 
-          // 判斷是否逾期並決定樣式
-          const overdue = isOverdue(item.expectedDate);
-          const borderClass = overdue ? 'border-red-500 border-2 bg-red-50 shadow-md' : 'border border-gray-200 bg-white';
-          const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
-          
-          let currencySymbol = 'HKD';
-          if(item.currency === 'RMB') currencySymbol = 'RMB';
-          if(item.currency === 'JPY') currencySymbol = 'JPY';
+        // 判斷是否逾期並決定樣式
+        const overdue = isOverdue(item.expectedDate);
+        const borderClass = overdue ? 'border-red-500 border-2 bg-red-50 shadow-md' : 'border border-gray-200 bg-white';
+        const overdueBadge = overdue ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded mr-2 font-bold shadow-sm animate-pulse">⚠️ 逾期未取</span>' : '';
+        
+        let currencySymbol = '$';
+        if(item.currency === 'RMB') currencySymbol = '¥ (RMB) ';
+        if(item.currency === 'JPY') currencySymbol = '¥ (JPY) ';
 
-          pendingList.innerHTML += `
-            <div class="flex items-center p-4 rounded-lg mb-4 ${borderClass}">
-              <div class="flex flex-col items-center mr-4 space-y-2 w-8">
-                <input type="checkbox" onchange="toggleStatus('${item.id}', 'pending')" class="w-6 h-6 cursor-pointer rounded">
-                <button onclick="editItem('${item.id}')" class="text-blue-500 text-sm hover:underline">編輯</button>
-              </div>
-              <div class="flex-1 overflow-hidden">
-                <div class="flex justify-between items-start">
-                  <div class="pr-2">
-                    <div class="mb-2 flex flex-wrap gap-1">
-                      ${overdueBadge}
-                      <span class="text-xs font-semibold bg-gray-200 px-2 py-1 rounded text-gray-700">${item.category || '未分類'}</span>
-                    </div>
-                    <h3 class="text-lg font-bold leading-tight">${item.name}</h3>
-                    <p class="text-sm text-gray-600 mt-1 truncate">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
+        // ✨ 判斷是否有相片，若有則生成 <img> 標籤
+        let imageTag = item.image ? `<img src="${item.image}" class="w-16 h-16 object-cover rounded border mr-3 flex-shrink-0">` : '';
+
+        // 生成卡片 HTML
+        pendingList.innerHTML += `
+          <div class="flex items-center p-4 rounded-lg mb-4 ${borderClass}">
+            <div class="flex flex-col items-center mr-3 space-y-2 w-8">
+              <input type="checkbox" onchange="toggleStatus('${item.id}', 'pending')" class="w-6 h-6 cursor-pointer rounded">
+              <button onclick="editItem('${item.id}')" class="text-blue-500 text-sm hover:underline">編輯</button>
+            </div>
+            
+            <!-- 🖼️ 插入相片縮圖 -->
+            ${imageTag}
+            
+            <div class="flex-1 overflow-hidden">
+              <div class="flex justify-between items-start">
+                <div class="pr-2">
+                  <div class="mb-2 flex flex-wrap gap-1 items-center">
+                    ${overdueBadge}
+                    <span class="text-xs font-semibold bg-gray-200 px-2 py-1 rounded text-gray-700">${item.category || '未分類'}</span>
+                    <!-- 🔢 插入數量標籤 -->
+                    <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">x${item.quantity || 1}</span>
                   </div>
-                  <div class="text-right whitespace-nowrap pl-2 border-l border-gray-200">
-                    <p class="text-sm font-medium text-gray-500">出貨: <span class="font-bold ${overdue ? 'text-red-500' : 'text-gray-700'}">${item.expectedDate || '未知'}</span></p>
-                    <p class="text-lg font-bold text-red-600 mt-2">尾款: ${currencySymbol}${item.balance}</p>
-                  </div>
+                  <h3 class="text-lg font-bold leading-tight">${item.name}</h3>
+                  <p class="text-sm text-gray-600 mt-1 truncate">${item.manufacturer || '-'} | ${item.shop || '-'}</p>
+                </div>
+                <div class="text-right whitespace-nowrap pl-2 border-l border-gray-200">
+                  <p class="text-sm font-medium text-gray-500">出貨: <span class="font-bold ${overdue ? 'text-red-500' : 'text-gray-700'}">${item.expectedDate || '未知'}</span></p>
+                  <p class="text-lg font-bold text-red-600 mt-2">尾: ${currencySymbol}${item.balance}</p>
                 </div>
               </div>
             </div>
-          `;
-        });
+          </div>
+        `;
+      });
       }
 
       // 更新總額文字
@@ -342,6 +406,7 @@
 
       const formData = {
         name: document.getElementById('name').value,
+        quantity: Number(document.getElementById('quantity').value) || 1, // ✨ 儲存數量
         category: document.getElementById('category').value,
         manufacturer: document.getElementById('manufacturer').value,
         shop: document.getElementById('shop').value,
@@ -349,6 +414,7 @@
         depositType: document.getElementById('depositType').value,
         currency: document.getElementById('currency').value,
         balance: Number(document.getElementById('balance').value),
+        image: base64Image, // ✨ 儲存相片
         userId: currentUser.uid
       };
 
@@ -395,6 +461,16 @@
       document.getElementById('depositType').value = item.depositType || 'partial';
       document.getElementById('currency').value = item.currency || 'HKD';
       document.getElementById('balance').value = item.balance || 0;
+      // (在原本的賦值邏輯中加入這幾行)
+      document.getElementById('quantity').value = item.quantity || 1;
+      
+      base64Image = item.image || "";
+      if (base64Image) {
+        document.getElementById('image-preview').src = base64Image;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+      } else {
+        document.getElementById('image-preview-container').classList.add('hidden');
+      }
       
       checkDepositType();
       switchTab('form');
