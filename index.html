@@ -433,6 +433,7 @@
           formData.status = 'pending';
           await addDoc(collection(db, "toys"), formData);
           document.getElementById('toy-form').reset();
+          window.removeImage();
           checkDepositType(); 
           alert('✅ 玩具新增成功！');
         }
@@ -492,6 +493,7 @@
 
       if(tabName !== 'form') {
          document.getElementById('toy-form').reset();
+        window.removeImage();
          editingId = null;
          checkDepositType();
          document.getElementById('tab-form').innerText = '➕ 新增';
