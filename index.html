@@ -372,9 +372,9 @@
 
       // 更新總額文字
       let totalStrings = [];
-      if (totals.HKD > 0) totalStrings.push(`HKD $${totals.HKD}`);
-      if (totals.RMB > 0) totalStrings.push(`RMB ¥${totals.RMB}`);
-      if (totals.JPY > 0) totalStrings.push(`JPY ¥${totals.JPY}`);
+      if (totals.HKD > 0) totalStrings.push(`HKD ${totals.HKD}`);
+      if (totals.RMB > 0) totalStrings.push(`RMB ${totals.RMB}`);
+      if (totals.JPY > 0) totalStrings.push(`JPY ${totals.JPY}`);
       let totalDisplayText = totalStrings.length > 0 ? totalStrings.join(' / ') : '$0';
       
       let monthLabel = selectedMonth ? `${selectedMonth}` : '所有未取單';
