@@ -59,9 +59,18 @@
           <div class="mb-3 md:mb-0">
             <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 預計需付尾款：$0</h2>
           </div>
-          <div class="flex items-center space-x-2">
-            <label class="text-sm font-bold text-gray-700">月份：</label>
-            <input type="month" id="filter-month" class="border border-gray-300 p-1 rounded font-bold text-sm" onchange="renderLists()">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex items-center space-x-1">
+              <label class="text-sm font-bold text-gray-700">月份：</label>
+              <input type="month" id="filter-month" class="border border-gray-300 p-1 rounded font-bold text-sm" onchange="renderLists()">
+            </div>
+            <!-- ✨ 新增：種類篩選器 -->
+            <div class="flex items-center space-x-1">
+              <label class="text-sm font-bold text-gray-700">種類：</label>
+              <select id="filter-category" class="border border-gray-300 p-1 rounded font-bold text-sm bg-white" onchange="renderLists()">
+                <option value="">全部種類</option>
+              </select>
+            </div>
             <button onclick="clearMonthFilter()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 shadow-sm transition">看全部</button>
           </div>
         </div>
@@ -243,6 +252,7 @@
     // 清空月份篩選並重新渲染
     window.clearMonthFilter = function() {
       document.getElementById('filter-month').value = '';
+      document.getElementById('filter-category').value = ''; // ✨ 一併重設為全部種類
       renderLists();
     };
 
@@ -253,15 +263,29 @@
       receivedList.innerHTML = '';
 
       let totals = { HKD: 0, RMB: 0, JPY: 0 };
-      const selectedMonth = document.getElementById('filter-month').value; // 取得使用者選擇的月份
+      const selectedMonth = document.getElementById('filter-month').value;
+      const categorySelect = document.getElementById('filter-category');
+      const selectedCategory = categorySelect.value; // ✨ 記住目前選擇的種類
 
-      // 取得系統當前的年月，用來判定是否「逾期」
       const now = new Date();
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+      // ✨ 提前從「所有資料」收集種類、廠商、店舖，避免篩選後選單選項消失
       const categories = new Set();
       const manufacturers = new Set();
       const shops = new Set();
+      items.forEach(item => {
+        if (item.category) categories.add(item.category);
+        if (item.manufacturer) manufacturers.add(item.manufacturer);
+        if (item.shop) shops.add(item.shop);
+      });
+
+      // ✨ 自動更新種類下拉選單，並保留當前選中的項目
+      categorySelect.innerHTML = '<option value="">全部種類</option>' + 
+        Array.from(categories).map(c => `<option value="${c}">${c}</option>`).join('');
+      if (categories.has(selectedCategory)) {
+        categorySelect.value = selectedCategory;
+      }
 
       // 防呆：標準化日期，例如輸入 2026-8 會自動視為 2026-08
       const normalizeDate = (d) => {
@@ -286,7 +310,12 @@
         return checkVal < currentYearMonth;
       };
 
-      const pendingItems = items.filter(i => i.status === 'pending');
+      // ✨ 篩選出未取貨的訂單，如果有選種類就進行過濾
+      let pendingItems = items.filter(i => i.status === 'pending');
+      if (selectedCategory) {
+        pendingItems = pendingItems.filter(i => i.category === selectedCategory);
+      }
+
       const receivedItems = items.filter(i => i.status === 'received')
         .sort((a, b) => getSortValue(b.expectedDate).localeCompare(getSortValue(a.expectedDate)));
 
