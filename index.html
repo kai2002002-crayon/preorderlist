@@ -55,23 +55,27 @@
 
       <!-- ✨ 預訂清單頁面 (更新了頂部的月份過濾器) -->
       <div id="page-pending">
-        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded flex flex-col md:flex-row md:items-center justify-between">
-          <div class="mb-3 md:mb-0">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded flex flex-col gap-3">
+          <!-- 第一行：固定顯示金額 -->
+          <div>
             <h2 id="month-total" class="text-lg font-bold text-red-700">🔥 預計需付尾款：$0</h2>
           </div>
+
+          <!-- 第二行：固定顯示月份、種類、看全部 -->
           <div class="flex flex-wrap items-center gap-2">
             <div class="flex items-center space-x-1">
-              <label class="text-sm font-bold text-gray-700">月份：</label>
-              <input type="month" id="filter-month" class="border border-gray-300 p-1 rounded font-bold text-sm" onchange="renderLists()">
+              <label class="text-sm font-bold text-gray-700 whitespace-nowrap">月份：</label>
+              <input type="month" id="filter-month" class="border border-gray-300 p-1 rounded font-bold text-sm bg-white" onchange="renderLists()">
             </div>
-            <!-- ✨ 新增：種類篩選器 -->
+
             <div class="flex items-center space-x-1">
-              <label class="text-sm font-bold text-gray-700">種類：</label>
-              <select id="filter-category" class="border border-gray-300 p-1 rounded font-bold text-sm bg-white" onchange="renderLists()">
+              <label class="text-sm font-bold text-gray-700 whitespace-nowrap">種類：</label>
+              <select id="filter-category" class="border border-gray-300 p-1 rounded font-bold text-sm bg-white w-28 md:w-36 truncate" onchange="renderLists()">
                 <option value="">全部種類</option>
               </select>
             </div>
-            <button onclick="clearMonthFilter()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 shadow-sm transition">看全部</button>
+
+            <button onclick="clearMonthFilter()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded font-bold text-gray-700 shadow-sm transition whitespace-nowrap">看全部</button>
           </div>
         </div>
         <div id="pending-list" class="space-y-4">
